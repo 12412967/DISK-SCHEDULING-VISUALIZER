@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiskSim — Scheduling Visualizer</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════  SCANLINE OVERLAY  ══════════════════════ -->
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════  HEADER  ═══════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+
+      <div class="logo-block">
+        <span class="logo-icon" aria-hidden="true">◈</span>
+        <div class="logo-text">
+          <span class="logo-primary">DISKSIM</span>
+          <span class="logo-sub">DISK SCHEDULING VISUALIZER  ·  OS LAB</span>
+        </div>
+      </div>
+
+      <nav class="header-nav">
+        <span class="nav-label" id="status-indicator">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">IDLE</span>
+        </span>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle light / dark">
+          <span class="theme-icon">◐</span>
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════  MAIN LAYOUT  ═══════════════════════════ -->
+  <main class="app-grid">
+
+    <!-- ──────────────────────  LEFT COLUMN  ───────────────────────────── -->
+    <aside class="panel panel--controls" role="complementary" aria-label="Control panel">
+
+      <div class="panel-header">
+        <span class="panel-tag">SYS</span>
+        <h2 class="panel-title">Parameters</h2>
+      </div>
+
+      <form class="control-form" id="controlForm" autocomplete="off" novalidate>
+
+        <!-- Algorithm -->
+        <fieldset class="field-group">
+          <legend class="field-label">Algorithm</legend>
+          <div class="algo-grid" role="radiogroup" aria-label="Select algorithm">
+            <label class="algo-card" data-algo="fcfs">
+              <input type="radio" name="algorithm" value="fcfs" checked />
+              <span class="algo-name">FCFS</span>
+              <span class="algo-desc">First Come First Served</span>
+            </label>
+            <label class="algo-card" data-algo="sstf">
+              <input type="radio" name="algorithm" value="sstf" />
+              <span class="algo-name">SSTF</span>
+              <span class="algo-desc">Shortest Seek Time First</span>
+            </label>
+            <label class="algo-card" data-algo="scan">
+              <input type="radio" name="algorithm" value="scan" />
+              <span class="algo-name">SCAN</span>
+              <span class="algo-desc">Elevator Algorithm</span>
+            </label>
+            <label class="algo-card" data-algo="cscan">
+              <input type="radio" name="algorithm" value="cscan" />
+              <span class="algo-name">C-SCAN</span>
+              <span class="algo-desc">Circular SCAN</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- Disk size + Head -->
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label" for="diskSize">Disk Size</label>
+            <div class="input-wrap">
+              <input class="ctrl-input" type="number" id="diskSize"
+                     min="10" max="9999" value="200"
+                     aria-describedby="diskSizeHint" />
+              <span class="input-unit">cylinders</span>
+            </div>
+            <span class="field-hint" id="diskSizeHint">10 – 9999</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="headPos">Head Position</label>
+            <div class="input-wrap">
+              <input class="ctrl-input" type="number" id="headPos"
+                     min="0" max="9998" value="50"
+                     aria-describedby="headPosHint" />
+              <span class="input-unit">cyl</span>
+            </div>
+            <span class="field-hint" id="headPosHint">0 – (disk−1)</span>
+          </div>
+        </div>
+
+        <!-- Direction -->
+        <div class="field-group">
+          <span class="field-label">Direction</span>
+          <div class="dir-toggle-wrap">
+            <label class="dir-option">
+              <input type="radio" name="direction" value="0" />
+              <span class="dir-pill">◀ LEFT</span>
+            </label>
+            <label class="dir-option">
+              <input type="radio" name="direction" value="1" checked />
+              <span class="dir-pill">RIGHT ▶</span>
+            </label>
+          </div>
+          <span class="field-hint">Used by SCAN and C-SCAN</span>
+        </div>
+
+        <!-- Request Queue -->
+        <div class="field-group">
+          <label class="field-label" for="queueInput">Request Queue</label>
+          <textarea class="ctrl-textarea" id="queueInput"
+                    rows="3"
+                    placeholder="82, 170, 43, 140, 24, 16, 190"
+                    aria-describedby="queueHint"
+          >82, 170, 43, 140, 24, 16, 190</textarea>
+          <span class="field-hint" id="queueHint">Comma-separated cylinder numbers</span>
+        </div>
+
+        <!-- Animation Speed -->
+        <div class="field-group">
+          <div class="speed-label-row">
+            <span class="field-label">Animation Speed</span>
+            <span class="speed-value" id="speedValue">1×</span>
+          </div>
+          <input class="speed-slider" type="range"
+                 id="animSpeed" min="0.25" max="4" step="0.25" value="1"
+                 aria-label="Animation speed multiplier" />
+          <div class="speed-markers" aria-hidden="true">
+            <span>0.25×</span><span>1×</span><span>2×</span><span>4×</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-row">
+          <button class="btn btn--primary" type="button" id="btnRun">
+            <span class="btn-icon">▶</span> Run
+          </button>
+          <button class="btn btn--secondary" type="button" id="btnCompare">
+            <span class="btn-icon">⊞</span> Compare All
+          </button>
+          <button class="btn btn--ghost" type="button" id="btnRandom">
+            <span class="btn-icon">⚄</span> Random
+          </button>
+        </div>
+
+      </form>
+    </aside>
+
+    <!-- ──────────────────────  RIGHT COLUMN  ───────────────────────────── -->
+    <section class="right-column" aria-label="Visualization area">
+
+      <!-- ── Visualizer panel ─────────────────────────────────────────── -->
+      <div class="panel panel--viz">
+        <div class="panel-header">
+          <span class="panel-tag">VIZ</span>
+          <h2 class="panel-title" id="vizTitle">Head Movement</h2>
+          <div class="viz-meta" id="vizMeta" aria-live="polite"></div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="vizCanvas" role="img" aria-label="Disk head movement visualization"></canvas>
+          <!-- Idle overlay -->
+          <div class="canvas-idle" id="canvasIdle" aria-hidden="true">
+            <span class="idle-icon">◈</span>
+            <p>Configure parameters and press <strong>Run</strong></p>
+          </div>
+          <!-- Loader -->
+          <div class="canvas-loader" id="canvasLoader" aria-hidden="true" hidden>
+            <div class="loader-ring"></div>
+            <span>Executing binary…</span>
+          </div>
+        </div>
+
+        <!-- Playback controls -->
+        <div class="playback-bar" id="playbackBar" hidden>
+          <button class="pb-btn" id="btnPlayPause" aria-label="Play / Pause animation">
+            <span id="playPauseIcon">⏸</span>
+          </button>
+          <button class="pb-btn" id="btnRestart" aria-label="Restart animation">↺</button>
+          <div class="pb-progress-wrap">
+            <div class="pb-progress-track">
+              <div class="pb-progress-fill" id="pbFill"></div>
+            </div>
+          </div>
+          <span class="pb-step" id="pbStep">0 / 0</span>
+        </div>
+      </div>
+
+      <!-- ── Result stats ──────────────────────────────────────────────── -->
+      <div class="panel panel--stats" id="statsPanel" hidden>
+        <div class="panel-header">
+          <span class="panel-tag">RES</span>
+          <h2 class="panel-title">Result</h2>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Algorithm</span>
+            <span class="stat-value" id="resAlgo">—</span>
+          </div>
+          <div class="stat-card stat-card--highlight">
+            <span class="stat-label">Total Seek Time</span>
+            <span class="stat-value" id="resSeek">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Requests Served</span>
+            <span class="stat-value" id="resCount">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Avg Seek / Request</span>
+            <span class="stat-value" id="resAvg">—</span>
+          </div>
+        </div>
+
+        <div class="sequence-wrap">
+          <span class="field-label">Service Sequence</span>
+          <div class="sequence-scroll" id="sequenceTrack" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- ── Comparison panel ──────────────────────────────────────────── -->
+      <div class="panel panel--compare" id="comparePanel" hidden>
+        <div class="panel-header">
+          <span class="panel-tag">CMP</span>
+          <h2 class="panel-title">Algorithm Comparison</h2>
+          <span class="badge badge--best" id="bestBadge" hidden></span>
+        </div>
+
+        <div class="compare-body">
+          <!-- Bar chart -->
+          <div class="chart-wrap">
+            <canvas id="compareChart" aria-label="Comparison bar chart"></canvas>
+          </div>
+
+          <!-- Comparison table -->
+          <div class="compare-table-wrap">
+            <table class="compare-table" id="compareTable">
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Seek Time</th>
+                  <th>Sequence Length</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="compareTableBody">
+                <!-- rows injected by script.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ═══════════════════════════  TOAST  ══════════════════════════════════ -->
+  <div class="toast-container" id="toastContainer" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- ═══════════════════════════  FOOTER  ════════════════════════════════ -->
+  <footer class="site-footer">
+    <span>DISKSIM &nbsp;·&nbsp; CSE-316 OS Lab &nbsp;·&nbsp; LPU</span>
+    <span class="footer-sep">|</span>
+    <span>FCFS &nbsp; SSTF &nbsp; SCAN &nbsp; C-SCAN</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
