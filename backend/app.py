@@ -269,10 +269,10 @@ if __name__ == "__main__":
 
     print(f"\n  Disk Scheduler API  →  http://127.0.0.1:{port}")
     print(f"  Debug mode          :  {debug}")
-    print(f"  Endpoints           :  POST /run-algorithm  |  POST /compare-all  |  GET /health\n")
 
-    # 🔥 AUTO OPEN FRONTEND
-    frontend_path = os.path.abspath("../frontend/index.html")
-    webbrowser.open(f"file://{frontend_path}")
+    # Only open browser in LOCAL environment
+    if os.environ.get("ENV") != "production":
+        frontend_path = os.path.abspath("../frontend/index.html")
+        webbrowser.open(f"file://{frontend_path}")
 
     app.run(host="0.0.0.0", port=port, debug=debug)
